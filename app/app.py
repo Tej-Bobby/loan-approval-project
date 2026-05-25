@@ -8,6 +8,8 @@ sys.path.append(
 )
 
 import streamlit as st
+import pandas as pd
+import sqlite3
 
 from src.predict import (
     load_model,
@@ -15,12 +17,21 @@ from src.predict import (
     make_prediction
 )
 
+from src.database import (
+    create_table,
+    save_prediction
+)
 
-# Load Saved Model
+
+# Create Database Table
+create_table()
+
+
+# Load Model
 model = load_model("models/model.pkl")
 
 
-# Load Saved Preprocessor
+# Load Preprocessor
 preprocessor = load_preprocessor(
     "models/preprocessor.pkl"
 )
@@ -82,7 +93,7 @@ Credit_History = st.selectbox(
 )
 
 
-# Prediction Button
+# Predict Button
 if st.button("Predict"):
 
     # Feature Engineering
@@ -90,7 +101,7 @@ if st.button("Predict"):
         CoapplicantIncome > 0
     )
 
-    # Create Input Data
+    # Input Data
     input_data = {
 
         "Gender": Gender,
@@ -123,11 +134,42 @@ if st.button("Predict"):
         preprocessor
     )
 
-    # Result
+    # Convert Output
     if prediction == "Y":
+
+        result = "Approved"
 
         st.success("Loan Approved")
 
     else:
 
+        result = "Rejected"
+
         st.error("Loan Rejected")
+
+    # Save Prediction to Database
+    save_prediction(
+        input_data,
+        result
+    )
+
+
+# Show Prediction History
+if st.button("Show Prediction History"):
+
+    connection = sqlite3.connect(
+        "database/loan_app.db"
+    )
+
+    query = """
+        SELECT * FROM predictions
+    """
+
+    history_df = pd.read_sql_query(
+        query,
+        connection
+    )
+
+    connection.close()
+
+    st.dataframe(history_df)
