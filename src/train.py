@@ -1,39 +1,124 @@
-import pandas as pd
+import numpy as np
 
-from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.svm import SVC
+from sklearn.neighbors import KNeighborsClassifier
 
-from data_preprocessing import handle_missing_values
-from data_preprocessing import encode_features
-
-from feature_engineering import log_transform
+from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import GridSearchCV
 
 
-df = pd.read_csv("data/raw/loan.csv")
+def get_models():
 
-df = handle_missing_values(df)
+    models = {
 
-df = encode_features(df)
+        "Logistic Regression": LogisticRegression(),
 
-df = log_transform(df, ['ApplicantIncome'])
+        "Decision Tree": DecisionTreeClassifier(
+            random_state=42
+        ),
 
-X = df.drop('Loan_Status', axis=1)
+        "Random Forest": RandomForestClassifier(
+            random_state=42
+        ),
 
-y = df['Loan_Status']
+        "SVM": SVC(),
 
-X_train, X_test, y_train, y_test = train_test_split(
-    X,
-    y,
-    test_size=0.2,
-    random_state=42
-)
+        "KNN": KNeighborsClassifier()
+    }
 
-model = RandomForestClassifier()
+    return models
 
-model.fit(X_train, y_train)
 
-print("Training completed")
+def train_model(model, X_train, y_train):
 
-import joblib
+    model.fit(X_train, y_train)
 
-joblib.dump(model, "models/loan_model.pkl")
+    return model
+
+
+def cross_validate_models(models, X_train, y_train):
+
+    results = {}
+
+    for name, model in models.items():
+
+        scores = cross_val_score(
+            model,
+            X_train,
+            y_train,
+            cv=5,
+            scoring="accuracy"
+        )
+
+        mean_accuracy = np.mean(scores)
+
+        results[name] = mean_accuracy
+
+        print(f"{name}")
+
+        print("Scores:", scores)
+
+        print(f"Mean Accuracy: {mean_accuracy:.4f}")
+
+        print("-" * 40)
+
+    return results
+
+
+def get_best_model(results):
+
+    best_model = max(results, key=results.get)
+
+    best_accuracy = results[best_model]
+
+    print(f"\nBEST MODEL: {best_model}")
+
+    print(f"BEST CV ACCURACY: {best_accuracy:.4f}")
+
+    return best_model, best_accuracy
+
+
+def perform_grid_search(X_train, y_train):
+
+    svm = SVC(class_weight="balanced")
+
+    param_grid = {
+
+        "C": [0.1, 1, 10],
+
+        "kernel": ["linear", "rbf"],
+
+        "gamma": ["scale", "auto"]
+    }
+
+    grid_search = GridSearchCV(
+
+        estimator=svm,
+
+        param_grid=param_grid,
+
+        cv=5,
+
+        scoring="accuracy",
+
+        n_jobs=-1
+    )
+
+    grid_search.fit(X_train, y_train)
+
+    print(
+        f"Best Parameters: "
+        f"{grid_search.best_params_}"
+    )
+
+    print(
+        f"Best CV Accuracy: "
+        f"{grid_search.best_score_:.4f}"
+    )
+
+    best_model = grid_search.best_estimator_
+
+    return best_model

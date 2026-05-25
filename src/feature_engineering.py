@@ -1,13 +1,12 @@
-#log transform
-#outlier handling
-#feature creation
+def create_features(X_train, X_test):
 
-import numpy as np
+    # Create Binary Feature for Coapplicant
+    X_train["Has_Coapplicant"] = (
+        X_train["CoapplicantIncome"] > 0
+    ).astype(int)
 
+    X_test["Has_Coapplicant"] = (
+        X_test["CoapplicantIncome"] > 0
+    ).astype(int)
 
-def log_transform(df, columns):
-
-    for col in columns:
-        df[col] = np.log1p(df[col])
-
-    return df
+    return X_train, X_test
